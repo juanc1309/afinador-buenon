@@ -1,2 +1,2 @@
-# afinador-mamon
-afinador mamon vergas
+# afinador-bueno
+afinador muy bueno
