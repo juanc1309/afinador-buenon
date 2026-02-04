@@ -1,17 +1,44 @@
-// Script para integrar un modelo de Teachable Machine (imagen) y actualizar la UI
-// 1) Pon tu URL de modelo en MODEL_URL (carpeta que contiene model.json)
-// 2) Abre la página en un navegador y acepta acceso a la cámara
+// Script para integrar un modelo de Teachable Machine (audio) y actualizar la UI
+// 1) Pon tu URL de modelo de AUDIO en MODEL_URL (carpeta que contiene model.json)
+// 2) Abre la página en un navegador y acepta acceso al micrófono
 
 const MODEL_URL = "PUT_YOUR_MODEL_FOLDER_URL_HERE/"; // ej: https://teachablemachine.withgoogle.com/models/xxxxx/
-const CONFIDENCE_THRESHOLD = 0.35; // umbral mínimo para mostrar predicción
+const CONFIDENCE_THRESHOLD = 0.4; // umbral mínimo para mostrar predicción
 
-let model, webcamStream, videoEl, rafId;
+let model;
+let listening = false;
+
+const ui = {
+	button: null,
+	status: null,
+	note: null,
+	sub: null,
+	dial: null,
+};
+
+function cacheUI() {
+	ui.button = document.querySelector('.mic-toggle');
+	ui.status = document.querySelector('.status');
+	ui.note = document.querySelector('.note strong');
+	ui.sub = document.querySelector('.note span');
+	ui.dial = document.querySelector('.dial');
+}
+
+function setStatus(message) {
+	if (ui.status) ui.status.textContent = message;
+}
+
+function setButtonState(label, disabled = false) {
+	if (!ui.button) return;
+	ui.button.textContent = label;
+	ui.button.disabled = disabled;
+}
 
 async function loadTeachableMachineScript() {
-	if (window.tmImage) return;
+	if (window.tmAudio) return;
 	return new Promise((resolve, reject) => {
 		const s = document.createElement('script');
-		s.src = 'https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js';
+		s.src = 'https://cdn.jsdelivr.net/npm/@teachablemachine/audio@0.8/dist/teachablemachine-audio.min.js';
 		s.onload = () => resolve();
 		s.onerror = (e) => reject(e);
 		document.head.appendChild(s);
@@ -20,93 +47,94 @@ async function loadTeachableMachineScript() {
 
 async function initModel() {
 	if (!MODEL_URL || MODEL_URL.includes('PUT_YOUR_MODEL')) {
-		console.warn('Teachable Machine: coloca la URL del modelo en MODEL_URL dentro de script.js');
-		return;
+		setStatus('Pega la URL de tu modelo de audio en MODEL_URL (script.js).');
+		return null;
 	}
 
 	await loadTeachableMachineScript();
-	model = await window.tmImage.load(MODEL_URL + 'model.json', MODEL_URL + 'metadata.json');
+	model = await window.tmAudio.load(MODEL_URL + 'model.json', MODEL_URL + 'metadata.json');
+	setStatus('Modelo cargado. Pulsa para escuchar tu guitarra.');
+	return model;
 }
 
-async function startWebcam() {
-	stopWebcam();
-	videoEl = document.createElement('video');
-	videoEl.setAttribute('autoplay', '');
-	videoEl.setAttribute('muted', '');
-	videoEl.setAttribute('playsinline', '');
-	videoEl.style.width = '160px';
-	videoEl.style.height = '120px';
-	videoEl.style.position = 'absolute';
-	videoEl.style.right = '12px';
-	videoEl.style.top = '12px';
-	videoEl.style.borderRadius = '8px';
-	videoEl.style.boxShadow = '0 6px 18px rgba(0,0,0,.6)';
-	document.body.appendChild(videoEl);
-
-	try {
-		webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-		videoEl.srcObject = webcamStream;
-		await videoEl.play();
-		predictLoop();
-	} catch (err) {
-		console.error('No se pudo acceder a la cámara:', err);
-	}
+function ensureDialCSS() {
+	const styleId = 'tm-needle-style';
+	if (document.getElementById(styleId)) return;
+	const s = document.createElement('style');
+	s.id = styleId;
+	s.textContent = `.dial::before { transform: rotate(var(--needle-rotate, -20deg)); transition: transform .15s linear; }`;
+	document.head.appendChild(s);
 }
 
-function stopWebcam() {
-	if (rafId) cancelAnimationFrame(rafId);
-	if (videoEl) {
-		videoEl.pause();
-		if (videoEl.parentElement) videoEl.parentElement.removeChild(videoEl);
-		videoEl = null;
-	}
-	if (webcamStream) {
-		webcamStream.getTracks().forEach(t => t.stop());
-		webcamStream = null;
-	}
-}
+function updateDial({ label, probability, classIndex }) {
+	if (!ui.note || !ui.sub || !ui.dial) return;
 
-async function predictLoop() {
-	if (!model || !videoEl) return;
-	try {
-		const predictions = await model.predict(videoEl, false);
-		handlePredictions(predictions);
-	} catch (err) {
-		console.error('Error en predict:', err);
+	if (probability >= CONFIDENCE_THRESHOLD) {
+		ui.note.textContent = label.toUpperCase();
+		ui.sub.textContent = `${Math.round(probability * 100)}%`;
+		const baseAngle = -40;
+		const perClass = 20;
+		const jitter = (probability - CONFIDENCE_THRESHOLD) * 40;
+		const angle = baseAngle + classIndex * perClass + jitter;
+		ui.dial.style.setProperty('--needle-rotate', `${angle}deg`);
+		ui.dial.style.borderColor = '#1aff9c';
+	} else {
+		ui.note.textContent = '—';
+		ui.sub.textContent = 'Esperando...';
+		ui.dial.style.setProperty('--needle-rotate', '-20deg');
+		ui.dial.style.borderColor = '#1aff9c55';
 	}
-	rafId = requestAnimationFrame(predictLoop);
 }
 
 function handlePredictions(preds) {
 	if (!Array.isArray(preds) || preds.length === 0) return;
-	// ordena por probabilidad descendente
-	preds.sort((a, b) => b.probability - a.probability);
-	const top = preds[0];
-	const noteEl = document.querySelector('.note strong');
-	const subEl = document.querySelector('.note span');
-	const dialNeedle = document.querySelector('.dial');
+	const ordered = [...preds].sort((a, b) => b.probability - a.probability);
+	const top = ordered[0];
+	const classIndex = ordered.findIndex(p => p.className === top.className);
+	updateDial({ label: top.className, probability: top.probability, classIndex });
+}
 
-	if (!noteEl || !subEl || !dialNeedle) return;
-
-	if (top.probability >= CONFIDENCE_THRESHOLD) {
-		noteEl.textContent = top.className.toUpperCase();
-		subEl.textContent = `${Math.round(top.probability * 100)}%`;
-		// animar la aguja del dial según probabilidad y el índice de clase
-		const idx = preds.findIndex(p => p.className === top.className);
-		const baseAngle = -40; // ángulo mínimo
-		const perClass = 20; // separación por clase
-		const jitter = (top.probability - CONFIDENCE_THRESHOLD) * 40; // mueve más según confianza
-		const angle = baseAngle + idx * perClass + jitter;
-		// aplicar rotación a la pseudo-elemento ::before cambiando una variable CSS
-		dialNeedle.style.setProperty('--needle-rotate', angle + 'deg');
-		// pequeña retroalimentación visual
-		dialNeedle.style.borderColor = '#1aff9c';
-	} else {
-		noteEl.textContent = '—';
-		subEl.textContent = 'Esperando...';
-		dialNeedle.style.setProperty('--needle-rotate', '-20deg');
-		dialNeedle.style.borderColor = '#1aff9c55';
+async function startListening() {
+	if (!model) {
+		setStatus('Primero carga el modelo.');
+		return;
 	}
+	if (listening) return;
+	setButtonState('Escuchando...', true);
+	try {
+		await model.listen(handlePredictions, {
+			includeSpectrogram: false,
+			probabilityThreshold: CONFIDENCE_THRESHOLD,
+			invokeCallbackOnNoiseAndUnknown: true,
+			overlapFactor: 0.5,
+		});
+		listening = true;
+		setButtonState('Detener micrófono');
+		setStatus('Micrófono activo. Toca una cuerda.');
+	} catch (err) {
+		console.error('No se pudo acceder al micrófono:', err);
+		setStatus('No pude acceder al micrófono. Revisa permisos del navegador.');
+		setButtonState('Activar micrófono');
+	}
+}
+
+function stopListening() {
+	if (!model || !listening) return;
+	model.stopListening();
+	listening = false;
+	setButtonState('Activar micrófono');
+	setStatus('Micrófono detenido.');
+}
+
+function wireControls() {
+	if (!ui.button) return;
+	ui.button.addEventListener('click', () => {
+		if (listening) {
+			stopListening();
+		} else {
+			startListening();
+		}
+	});
 }
 
 function wireModes() {
@@ -117,26 +145,24 @@ function wireModes() {
 	}));
 }
 
-function ensureDialCSS() {
-	// inyecta pequeña regla para usar la variable --needle-rotate en el pseudo-elemento
-	const styleId = 'tm-needle-style';
-	if (document.getElementById(styleId)) return;
-	const s = document.createElement('style');
-	s.id = styleId;
-	s.textContent = `.dial::before { transform: rotate(var(--needle-rotate, -20deg)); transition: transform .15s linear; }`;
-	document.head.appendChild(s);
-}
-
 async function boot() {
+	cacheUI();
 	ensureDialCSS();
 	wireModes();
-	await initModel();
-	if (model) startWebcam();
+	wireControls();
+	setButtonState('Cargando modelo...', true);
+	try {
+		await initModel();
+	} catch (err) {
+		console.error('Error cargando el modelo:', err);
+		setStatus('Error al cargar el modelo. Verifica la URL.');
+	} finally {
+		setButtonState('Activar micrófono', false);
+	}
 }
 
 window.addEventListener('DOMContentLoaded', () => {
 	boot();
 });
 
-window.addEventListener('beforeunload', () => stopWebcam());
-
+window.addEventListener('beforeunload', () => stopListening());

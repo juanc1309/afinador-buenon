@@ -1,99 +1,144 @@
-* { 
-  box-sizing: border-box; 
-  font-family: 'Segoe UI', sans-serif; }
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
 body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at top, #1e1e1e, #0b0b0b);
-      color: #eaeaea;
-    }
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #1e1e1e, #0b0b0b);
+  color: #eaeaea;
+}
 
-    .app {
-      width: 360px;
-      background: #111;
-      border-radius: 30px;
-      padding: 25px 20px 30px;
-      box-shadow: 0 25px 60px rgba(0,0,0,.6);
-    }
+.app {
+  width: 360px;
+  background: #111;
+  border-radius: 30px;
+  padding: 25px 20px 30px;
+  box-shadow: 0 25px 60px rgba(0,0,0,.6);
+}
 
-    h1 {
-      text-align: center;
-      margin: 0 0 20px;
-      font-weight: 600;
-      letter-spacing: .5px;
-    }
+h1 {
+  text-align: center;
+  margin: 0 0 20px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
 
-    .dial {
-      width: 220px;
-      height: 220px;
-      margin: 0 auto 25px;
-      border-radius: 50%;
-      border: 8px solid #1aff9c55;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+.dial {
+  width: 220px;
+  height: 220px;
+  margin: 0 auto 25px;
+  border-radius: 50%;
+  border: 8px solid #1aff9c55;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    .dial::before {
-      content: '';
-      position: absolute;
-      width: 2px;
-      height: 80px;
-      background: #1aff9c;
-      transform-origin: bottom;
-      transform: rotate(-20deg);
-      bottom: 50%;
-    }
+.dial::before {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 80px;
+  background: #1aff9c;
+  transform-origin: bottom;
+  transform: rotate(-20deg);
+  bottom: 50%;
+}
 
-    .note {
-      text-align: center;
-    }
+.note {
+  text-align: center;
+}
 
-    .note span {
-      display: block;
-      font-size: 12px;
-      color: #1aff9c;
-      letter-spacing: 1px;
-    }
+.note span {
+  display: block;
+  font-size: 12px;
+  color: #1aff9c;
+  letter-spacing: 1px;
+}
 
-    .note strong {
-      font-size: 42px;
-      font-weight: 600;
-      color: #1aff9c;
-    }
+.note strong {
+  font-size: 42px;
+  font-weight: 600;
+  color: #1aff9c;
+}
 
-    .modes {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 25px;
-    }
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  margin-bottom: 18px;
+}
 
-    .mode {
-      flex: 1;
-      margin: 0 5px;
-      padding: 12px 0;
-      border-radius: 25px;
-      text-align: center;
-      font-size: 12px;
-      border: 2px solid #1aff9c55;
-      color: #1aff9c;
-      cursor: pointer;
-      transition: .2s;
-    }
+.mic-toggle {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: #1aff9c;
+  color: #000;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: 0 6px 15px rgba(26, 255, 156, .25);
+}
 
-    .mode.active, .mode:hover {
-      background: #1aff9c;
-      color: #000;
-    }
+.mic-toggle:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+  box-shadow: none;
+}
 
-    footer {
-      margin-top: 25px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      opacity: .7;
-    }
+.mic-toggle:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.status {
+  margin: 0;
+  font-size: 12px;
+  color: #d9d9d9;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: #8a8a8a;
+}
+
+.modes {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.mode {
+  flex: 1;
+  margin: 0 5px;
+  padding: 12px 0;
+  border-radius: 25px;
+  text-align: center;
+  font-size: 12px;
+  border: 2px solid #1aff9c55;
+  color: #1aff9c;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.mode.active,
+.mode:hover {
+  background: #1aff9c;
+  color: #000;
+}
+
+footer {
+  margin-top: 25px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: .7;
+}
