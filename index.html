@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TuneMaster</title>
-    <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
@@ -15,6 +15,17 @@
         <span>IN TUNE</span>
         <strong>E</strong>
       </div>
+    </div>
+
+    <div class="controls">
+      <label class="input-label" for="model-url">URL del modelo de audio</label>
+      <div class="input-row">
+        <input id="model-url" class="model-url" type="url" placeholder="https://teachablemachine.withgoogle.com/models/xxxxx/" />
+        <button class="load-model" type="button">Cargar</button>
+      </div>
+      <button class="mic-toggle" type="button" disabled>Activar micrófono</button>
+      <p class="status">Pega la URL de tu modelo de audio y pulsa “Cargar”.</p>
+      <p class="hint">Debe ser un modelo Teachable Machine de Audio (no imagen).</p>
     </div>
 
     <div class="modes">
