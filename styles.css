@@ -47,7 +47,8 @@ h1 {
   height: 80px;
   background: #1aff9c;
   transform-origin: bottom;
-  transform: rotate(-20deg);
+  transform: rotate(var(--needle-rotate, -20deg));
+  transition: transform .12s linear;
   bottom: 50%;
 }
 
