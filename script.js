@@ -2,7 +2,7 @@
 // 1) Pon tu URL de modelo de AUDIO en MODEL_URL (carpeta que contiene model.json)
 // 2) Abre la página en un navegador y acepta acceso al micrófono
 
-const MODEL_URL = "PUT_YOUR_MODEL_FOLDER_URL_HERE/"; // ej: https://teachablemachine.withgoogle.com/models/xxxxx/
+const DEFAULT_MODEL_URL = ""; // ej: https://teachablemachine.withgoogle.com/models/xxxxx/
 const CONFIDENCE_THRESHOLD = 0.4; // umbral mínimo para mostrar predicción
 
 let model;
@@ -14,6 +14,8 @@ const ui = {
 	note: null,
 	sub: null,
 	dial: null,
+	modelInput: null,
+	loadButton: null,
 };
 
 function cacheUI() {
@@ -22,6 +24,8 @@ function cacheUI() {
 	ui.note = document.querySelector('.note strong');
 	ui.sub = document.querySelector('.note span');
 	ui.dial = document.querySelector('.dial');
+	ui.modelInput = document.querySelector('#model-url');
+	ui.loadButton = document.querySelector('.model-load');
 }
 
 function setStatus(message) {
@@ -46,13 +50,14 @@ async function loadTeachableMachineScript() {
 }
 
 async function initModel() {
-	if (!MODEL_URL || MODEL_URL.includes('PUT_YOUR_MODEL')) {
-		setStatus('Pega la URL de tu modelo de audio en MODEL_URL (script.js).');
+	const modelURL = getModelURL();
+	if (!modelURL) {
+		setStatus('Pega la URL de tu modelo de audio y pulsa "Cargar".');
 		return null;
 	}
 
 	await loadTeachableMachineScript();
-	model = await window.tmAudio.load(MODEL_URL + 'model.json', MODEL_URL + 'metadata.json');
+	model = await window.tmAudio.load(`${modelURL}model.json`, `${modelURL}metadata.json`);
 	setStatus('Modelo cargado. Pulsa para escuchar tu guitarra.');
 	return model;
 }
@@ -96,7 +101,7 @@ function handlePredictions(preds) {
 
 async function startListening() {
 	if (!model) {
-		setStatus('Primero carga el modelo.');
+		setStatus('Primero carga el modelo con el botón "Cargar".');
 		return;
 	}
 	if (listening) return;
@@ -135,6 +140,21 @@ function wireControls() {
 			startListening();
 		}
 	});
+
+	if (ui.loadButton) {
+		ui.loadButton.addEventListener('click', async () => {
+			await loadModelFromInput();
+		});
+	}
+
+	if (ui.modelInput) {
+		ui.modelInput.addEventListener('keydown', async (event) => {
+			if (event.key === 'Enter') {
+				event.preventDefault();
+				await loadModelFromInput();
+			}
+		});
+	}
 }
 
 function wireModes() {
@@ -150,8 +170,49 @@ async function boot() {
 	ensureDialCSS();
 	wireModes();
 	wireControls();
+	applyStoredModelURL();
+	setButtonState('Activar micrófono', false);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+	boot();
+});
+
+window.addEventListener('beforeunload', () => stopListening());
+
+function normalizeModelURL(value) {
+	if (!value) return '';
+	const trimmed = value.trim();
+	if (!trimmed) return '';
+	return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
+}
+
+function getModelURL() {
+	if (!ui.modelInput) return normalizeModelURL(DEFAULT_MODEL_URL);
+	return normalizeModelURL(ui.modelInput.value) || normalizeModelURL(DEFAULT_MODEL_URL);
+}
+
+function applyStoredModelURL() {
+	if (!ui.modelInput) return;
+	const stored = window.localStorage.getItem('tmAudioModelURL') || '';
+	ui.modelInput.value = stored || DEFAULT_MODEL_URL;
+}
+
+async function loadModelFromInput() {
+	const modelURL = getModelURL();
+	if (!modelURL) {
+		setStatus('Necesito una URL válida para cargar el modelo.');
+		return;
+	}
+
+	if (listening) {
+		stopListening();
+	}
+
 	setButtonState('Cargando modelo...', true);
+	setStatus('Cargando modelo de Teachable Machine...');
 	try {
+		window.localStorage.setItem('tmAudioModelURL', modelURL);
 		await initModel();
 	} catch (err) {
 		console.error('Error cargando el modelo:', err);
@@ -160,9 +221,3 @@ async function boot() {
 		setButtonState('Activar micrófono', false);
 	}
 }
-
-window.addEventListener('DOMContentLoaded', () => {
-	boot();
-});
-
-window.addEventListener('beforeunload', () => stopListening());
