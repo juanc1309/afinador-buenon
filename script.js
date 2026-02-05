@@ -2,8 +2,8 @@
 // 1) Pon tu URL de modelo de AUDIO en MODEL_URL (carpeta que contiene model.json)
 // 2) Abre la página en un navegador y acepta acceso al micrófono
 
-const MODEL_URL = "PUT_YOUR_MODEL_FOLDER_URL_HERE/"; // ej: https://teachablemachine.withgoogle.com/models/xxxxx/
-const CONFIDENCE_THRESHOLD = 0.4; // umbral mínimo para mostrar predicción
+const MODEL_URL = "./teachablemachine.withgoogle.com/models/5BldbJJCs/";
+const CONFIDENCE_THREHOLD = 0.4; // umbral mínimo para mostrar predicción
 
 let model;
 let listening = false;
