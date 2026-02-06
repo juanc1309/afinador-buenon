@@ -1,60 +1,47 @@
-const MODEL_URL = "https://teachablemachine.withgoogle.com/models/5BldbJJCs/";
+const URL = "./teachablemachine.withgoogle.com/models/5BldbJJCs//"; // carpeta donde está model.json
 
 let model;
-let listening = false;
+let isListening = false;
 
-const button = document.querySelector(".mic-toggle");
-const status = document.querySelector(".status");
-const note = document.querySelector(".note strong");
-const sub = document.querySelector(".note span");
-const dial = document.querySelector(".dial");
+// elementos del DOM
+const noteText = document.querySelector(".note strong");
+const statusText = document.querySelector(".note span");
 
 async function loadModel() {
-	const script = document.createElement("script");
-	script.src = "https://cdn.jsdelivr.net/npm/@teachablemachine/audio@0.8/dist/teachablemachine-audio.min.js";
-	document.head.appendChild(script);
-
-	await new Promise(r => script.onload = r);
-
-	await navigator.mediaDevices.getUserMedia({ audio: true });
-
-	model = await tmAudio.load(
-		MODEL_URL + "model.json",
-		MODEL_URL + "metadata.json"
-	);
-
-	status.textContent = "Modelo listo. Activa el micrófono.";
+  model = await tmAudio.load(
+    URL + "model.json",
+    URL + "metadata.json"
+  );
+  console.log("Modelo cargado");
+  statusText.textContent = "READY";
 }
 
-function updateUI(pred) {
-	note.textContent = pred.className;
-	sub.textContent = Math.round(pred.probability * 100) + "%";
-	const angle = (pred.probability - 0.5) * 120;
-	dial.style.setProperty("--needle-rotate", `${angle}deg`);
+// activar micrófono y escuchar
+async function startListening() {
+  if (isListening) return;
+
+  await model.listen(predictions => {
+    const topPrediction = predictions.reduce((a, b) =>
+      b.probability > a.probability ? b : a
+    );
+
+    // mostrar nota detectada
+    noteText.textContent = topPrediction.className;
+    statusText.textContent =
+      Math.round(topPrediction.probability * 100) + "%";
+  }, {
+    overlapFactor: 0.5,
+    invokeCallbackOnNoiseAndUnknown: true
+  });
+
+  isListening = true;
 }
 
-async function start() {
-	if (listening) return;
-
-	await model.listen(preds => {
-		const top = preds.reduce((a, b) =>
-			b.probability > a.probability ? b : a
-		);
-		updateUI(top);
-	}, { overlapFactor: 0.5 });
-
-	listening = true;
-	button.textContent = "Detener micrófono";
-	status.textContent = "Escuchando...";
+// ⚠️ esto fuerza el permiso del micrófono
+async function init() {
+  await loadModel();
+  await startListening();
 }
 
-function stop() {
-	model.stopListening();
-	listening = false;
-	button.textContent = "Activar micrófono";
-	status.textContent = "Micrófono detenido";
-}
-
-button.onclick = () => listening ? stop() : start();
-
-loadModel();
+// arrancar al cargar la página
+window.addEventListener("click", init, { once: true });
